@@ -22,12 +22,6 @@ type Observer interface {
 
 func Visit(context interface{}, path string, name string, object interface{}, observer Observer) {
 
-	//log.Debugf("path: %q, name: %q", path, name)
-	// if object == nil {
-	// 	observer.OnNil(context, path, "")
-	// 	return
-	// }
-
 	switch object := object.(type) {
 	case reflect.Value:
 		switch object.Kind() {
@@ -51,8 +45,6 @@ func Visit(context interface{}, path string, name string, object interface{}, ob
 		case reflect.Slice, reflect.Array:
 			observer.OnArray(context, path, name, true, object.Kind(), object.Type(), object.Len())
 			for i := 0; i < object.Len(); i++ {
-				//fpath := fmt.Sprintf("%s[%d]", path, i)
-				//observer.OnValue(fpath, reflect.ValueOf(object.Index(i)).Kind(), reflect.ValueOf(object.Index(i)).Type(), object.Index(i))
 				Visit(context, chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
 			}
 			observer.OnArray(context, path, name, false, object.Kind(), object.Type(), object.Len())
