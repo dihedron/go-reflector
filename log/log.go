@@ -34,6 +34,30 @@ const (
 	NUL
 )
 
+type Flag int8
+
+const (
+	FlagSourceInfo = 1 << iota
+	FlagFunctionInfo
+)
+
+const FunctionWidth int = 32
+
+// String returns a string representation of the log level for use in traces.
+func (l Level) String() string {
+	switch l {
+	case DBG:
+		return "[D]"
+	case INF:
+		return "[I]"
+	case WRN:
+		return "[W]"
+	case ERR:
+		return "[E]"
+	}
+	return ""
+}
+
 // logln is the prototype of log functions writing a line to a stream.
 type logln func(writer io.Writer, args ...interface{}) (int, error)
 
@@ -49,6 +73,8 @@ var (
 	logTimeFormatLock sync.RWMutex
 	logColorise       bool
 	logColoriseLock   sync.RWMutex
+	logFlags          int8
+	logFlagsLock      sync.RWMutex
 	logDebugf         logf
 	logInfof          logf
 	logWarnf          logf
@@ -68,6 +94,7 @@ func init() {
 	} else {
 		SetColorise(true)
 	}
+	SetFlags(FlagSourceInfo | FlagFunctionInfo)
 }
 
 // SetLevel sets the log level for the application.
@@ -141,6 +168,20 @@ func SetColorise(enabled bool) {
 	logColorise = enabled
 }
 
+// SetFlags sets the flags governing how much information is gathered at runtime.
+func SetFlags(flags int8) {
+	logFlagsLock.Lock()
+	defer logFlagsLock.Unlock()
+	logFlags = flags
+}
+
+// GetFlags returns the flags governing how much information is gathered at runtime.
+func GetFlags() int8 {
+	logFlagsLock.RLock()
+	defer logFlagsLock.RUnlock()
+	return logFlags
+}
+
 // IsDebug returns whether the debug (DBG) log elevel is enabled.
 func IsDebug() bool {
 	return GetLevel() <= DBG
@@ -170,7 +211,7 @@ func IsDisabled() bool {
 // appending a new line.
 func Debugln(args ...interface{}) (int, error) {
 	if IsDebug() {
-		args = append([]interface{}{"[D]", time.Now().Format(GetTimeFormat()), "-"}, args...)
+		_, args = prepareFormatAndArgs(DBG, FunctionWidth, "", args)
 		return logDebugln(GetStream(), args...)
 	}
 	return 0, nil
@@ -180,7 +221,7 @@ func Debugln(args ...interface{}) (int, error) {
 // appending a new line.
 func Infoln(args ...interface{}) (int, error) {
 	if IsInfo() {
-		args = append([]interface{}{"[I]", time.Now().Format(GetTimeFormat()), "-"}, args...)
+		_, args = prepareFormatAndArgs(INF, FunctionWidth, "", args)
 		return logInfoln(GetStream(), args...)
 	}
 	return 0, nil
@@ -190,7 +231,7 @@ func Infoln(args ...interface{}) (int, error) {
 // appending a new line.
 func Warnln(args ...interface{}) (int, error) {
 	if IsWarning() {
-		args = append([]interface{}{"[W]", time.Now().Format(GetTimeFormat()), "-"}, args...)
+		_, args = prepareFormatAndArgs(WRN, FunctionWidth, "", args)
 		return logWarnln(GetStream(), args...)
 	}
 	return 0, nil
@@ -200,7 +241,7 @@ func Warnln(args ...interface{}) (int, error) {
 // appending a new line.
 func Errorln(args ...interface{}) (int, error) {
 	if IsError() {
-		args = append([]interface{}{"[E]", time.Now().Format(GetTimeFormat()), "-"}, args...)
+		_, args = prepareFormatAndArgs(ERR, FunctionWidth, "", args)
 		return logErrorln(GetStream(), args...)
 	}
 	return 0, nil
@@ -210,8 +251,7 @@ func Errorln(args ...interface{}) (int, error) {
 // appending a new line.
 func Debugf(format string, args ...interface{}) (int, error) {
 	if IsDebug() {
-		args = append([]interface{}{"[D]", time.Now().Format(GetTimeFormat())}, args...)
-		format = "%s %s - " + format
+		format, args = prepareFormatAndArgs(DBG, FunctionWidth, format, args...)
 		if !strings.HasSuffix(format, "\n") && !strings.HasSuffix(format, "\r") {
 			format = format + "\n"
 		}
@@ -224,8 +264,7 @@ func Debugf(format string, args ...interface{}) (int, error) {
 // appending a new line.
 func Infof(format string, args ...interface{}) (int, error) {
 	if IsInfo() {
-		args = append([]interface{}{"[I]", time.Now().Format(GetTimeFormat())}, args...)
-		format = "%s %s - " + format
+		format, args = prepareFormatAndArgs(INF, FunctionWidth, format, args...)
 		if !strings.HasSuffix(format, "\n") && !strings.HasSuffix(format, "\r") {
 			format = format + "\n"
 		}
@@ -238,8 +277,7 @@ func Infof(format string, args ...interface{}) (int, error) {
 // appending a new line.
 func Warnf(format string, args ...interface{}) (int, error) {
 	if IsWarning() {
-		args = append([]interface{}{"[W]", time.Now().Format(GetTimeFormat())}, args...)
-		format = "%s %s - " + format
+		format, args = prepareFormatAndArgs(WRN, FunctionWidth, format, args...)
 		if !strings.HasSuffix(format, "\n") && !strings.HasSuffix(format, "\r") {
 			format = format + "\n"
 		}
@@ -252,8 +290,7 @@ func Warnf(format string, args ...interface{}) (int, error) {
 // appending a new line.
 func Errorf(format string, args ...interface{}) (int, error) {
 	if IsError() {
-		args = append([]interface{}{"[E]", time.Now().Format(GetTimeFormat())}, args...)
-		format = "%s %s - " + format
+		format, args = prepareFormatAndArgs(ERR, FunctionWidth, format, args...)
 		if !strings.HasSuffix(format, "\n") && !strings.HasSuffix(format, "\r") {
 			format = format + "\n"
 		}
@@ -302,6 +339,89 @@ func Printf(format string, args ...interface{}) (int, error) {
 	}
 	return fmt.Fprintf(GetStream(), format, args...)
 }
+
+func prepareFormatAndArgs(level Level, length int, format string, args ...interface{}) (string, []interface{}) {
+
+	leadFormat := "%s %s - "
+	tailFormat := ""
+	leadArgs := []interface{}{level.String(), time.Now().Format(GetTimeFormat())}
+	tailArgs := []interface{}{}
+
+	flags := GetFlags()
+	if flags != 0 {
+		var fun, file string
+		var line int
+		pc, file, line, ok := runtime.Caller(2)
+		if !ok {
+			fun = "<unknown function>"
+			file = "<unknown source>"
+			line = 0
+		} else {
+			if flags&FlagFunctionInfo != 0 {
+				f := runtime.FuncForPC(pc)
+				if f == nil {
+					fun = "<unknown function>"
+				} else {
+					fun = f.Name()
+				}
+				fun = fun[strings.LastIndex(fun, "/")+1:]
+				if len(fun) >= 3 && len(fun) > length {
+					fun = "..." + fun[len(fun)-length+3:]
+				}
+				leadFormat = fmt.Sprintf("%s%%-%ds: ", leadFormat, length)
+				leadArgs = append(leadArgs, fun)
+			}
+			if flags&FlagSourceInfo != 0 {
+				tailFormat = " (%s:%d)"
+				tailArgs = append(tailArgs, []interface{}{file, line}...)
+			}
+		}
+	}
+	format = fmt.Sprintf("%s%s%s", leadFormat, format, tailFormat)
+	args = append(leadArgs, append(args, tailArgs...)...)
+	return format, args
+}
+
+// // methodName returns the name of the calling method, assumed to be two stack
+// // frames above; the name can be fully qualified, including the whole import
+// // path (e.g. "github.com/myrepo/myproject/mypackage.MyMethod").
+// func methodName() string {
+// 	pc, _, _, _ := runtime.Caller(2)
+// 	f := runtime.FuncForPC(pc)
+// 	if f == nil {
+// 		return "<?>"
+// 	}
+// 	return f.Name()
+// }
+
+// // unqulified ensures that the input string (typically representing a method name)
+// // is not qualified with the full import path.
+// func unqualified(name string) string {
+// 	// index := strings.LastIndex(name, "/")
+// 	// if index != -1 {
+// 	// 	return name[index:]
+// 	// }
+// 	// return name
+// 	return name[strings.LastIndex(name, "/")+1:]
+// }
+
+// // truncateBefore ensures that the input string is no longer than the given
+// // length; if it is, it is truncated and prepended with three dots (...).
+// func truncateBefore(s string, length int) string {
+// 	if len(s) >= 3 && len(s) > length {
+// 		s = "..." + s[len(s)-length+3:]
+// 	}
+// 	return s
+// }
+
+// // truncateBefore ensures that the input string is no longer than the given
+// // length; if it is, it is truncated and prepended with three dots (...).
+// func truncateAfter(s string, length int) string {
+// 	if len(s) >= 3 && len(s) > length {
+// 		s = s[0:len(s)-length-3] + "..."
+// 	}
+// 	return s
+// }
 
 // ToJSON converts an object into pretty-printed JSON format.
 func ToJSON(object interface{}) string {
