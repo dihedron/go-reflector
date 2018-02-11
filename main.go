@@ -35,20 +35,7 @@ func main() {
 	log.SetLevel(log.DBG)
 	log.SetStream(os.Stdout)
 	log.SetTimeFormat("15:04:05.000")
-
-	log.SetFlags(0)
-	log.Debugf("---------------------------------------------------------------------")
-	log.Debugf("ciao %s", "mondo")
-
 	log.SetFlags(log.FlagFunctionInfo)
-	log.Debugf("---------------------------------------------------------------------")
-	log.Debugf("ciao %s", "mondo")
-
-	log.SetFlags(log.FlagFunctionInfo | log.FlagSourceInfo)
-	log.Debugf("---------------------------------------------------------------------")
-	log.Debugf("ciao %s", "mondo")
-
-	os.Exit(0)
 
 	s := "string pointer"
 	o := Embedder{
