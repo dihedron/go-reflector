@@ -35,7 +35,7 @@ func (o MyObserver) OnPointer(context interface{}, path string, name string, sta
 	return true
 }
 
-func (o MyObserver) OnArray(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type, length int) bool {
+func (o MyObserver) OnList(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type, length int) bool {
 	counter := context.(*int)
 	if start {
 		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: (size %d) [", tab(*counter), name, length), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", kind, typ, path, name))
@@ -47,26 +47,30 @@ func (o MyObserver) OnArray(context interface{}, path string, name string, start
 	return true
 }
 
-func (o MyObserver) OnStruct(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type) bool {
+func (o MyObserver) OnStruct(context interface{}, path string, name string, start bool, object reflect.Value) bool {
 	counter := context.(*int)
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: {", tab(*counter), name), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", kind, typ, path, name))
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: {", tab(*counter), name), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
+			object.Kind(), object.Type(), path, name))
 		*counter++
 	} else {
 		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", kind, typ, path, name))
+		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
+			object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnMap(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type, object reflect.Value) bool {
+func (o MyObserver) OnMap(context interface{}, path string, name string, start bool, object reflect.Value) bool {
 	counter := context.(*int)
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: map[%s]%s {", tab(*counter), name, typ.Key().String(), typ.Elem().String()), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", kind, typ, path, name))
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: map[%s]%s {", tab(*counter), name, object.Type().Key().String(), object.Type().Elem().String()),
+			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
 		*counter++
 	} else {
 		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", kind, typ, path, name))
+		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(),
+			object.Type(), path, name))
 	}
 	return true
 }
