@@ -28,6 +28,7 @@ type Embedder struct {
 	StructPtr   *Struct
 	Array       [6]int
 	Slice       []float32
+	Map         map[string]int
 }
 
 func main() {
@@ -53,6 +54,11 @@ func main() {
 		},
 		Array: [6]int{0, 1, 2, 3, 4, 5},
 		Slice: []float32{0, 1, 2, 3, 4, 5, 6},
+		Map: map[string]int{
+			"name":    1,
+			"surname": 2,
+			"phone":   3,
+		},
 	}
 
 	observer := MyObserver{}

@@ -51,10 +51,12 @@ func Visit(context interface{}, path string, name string, object interface{}, ob
 			}
 			observer.OnStruct(context, path, name, false, object.Kind(), object.Type())
 		case reflect.Map:
+			observer.OnMap(context, path, name, true, object.Kind(), object.Type(), object)
 			for _, key := range object.MapKeys() {
 				//Visit(context, fmt.Sprintf("%s[%s]", path, format(key)), object.MapIndex(key), observer)
 				Visit(context, path, format(key), object.MapIndex(key), observer)
 			}
+			observer.OnMap(context, path, name, false, object.Kind(), object.Type(), object)
 		case reflect.Ptr:
 			observer.OnPointer(context, path, name, true, object.Kind(), object.Type())
 			if object.IsNil() {
