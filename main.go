@@ -13,6 +13,7 @@ import (
 
 type Struct struct {
 	MyInterf interface{}
+	MyString string
 }
 
 type Embedded struct {
@@ -48,9 +49,11 @@ func main() {
 		},
 		StructPlain: Struct{
 			MyInterf: "string as interface in referenced struct",
+			MyString: "string in struct",
 		},
 		StructPtr: &Struct{
 			MyInterf: "string as interface in pointed struct",
+			MyString: "string in pointed struct",
 		},
 		Array: [6]int{0, 1, 2, 3, 4, 5},
 		Slice: []float32{0, 1, 2, 3, 4, 5, 6},

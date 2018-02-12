@@ -14,9 +14,9 @@ import (
 )
 
 type Observer interface {
-	OnValue(context interface{}, path string, name string, kind reflect.Kind, typ reflect.Type, object reflect.Value) bool
-	OnPointer(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type) bool
-	OnList(context interface{}, path string, name string, start bool, kind reflect.Kind, typ reflect.Type, length int) bool
+	OnValue(context interface{}, path string, name string, object reflect.Value) bool
+	OnPointer(context interface{}, path string, name string, start bool, object reflect.Value) bool
+	OnList(context interface{}, path string, name string, start bool, object reflect.Value) bool
 	OnStruct(context interface{}, path string, name string, start bool, object reflect.Value) bool
 	OnMap(context interface{}, path string, name string, start bool, object reflect.Value) bool
 }
@@ -27,23 +27,23 @@ func Visit(context interface{}, path string, name string, object interface{}, ob
 	case reflect.Value:
 		switch object.Kind() {
 		case reflect.Invalid:
-			observer.OnValue(context, path, "?", object.Kind(), object.Type(), object.Elem())
+			observer.OnValue(context, path, "?", object.Elem())
 
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
 
-			observer.OnValue(context, path, name, object.Kind(), object.Type(), object)
+			observer.OnValue(context, path, name, object)
 
 		case reflect.Chan:
 		case reflect.Func:
 		case reflect.UnsafePointer:
 		case reflect.Slice, reflect.Array:
-			observer.OnList(context, path, name, true, object.Kind(), object.Type(), object.Len())
+			observer.OnList(context, path, name, true, object)
 			for i := 0; i < object.Len(); i++ {
 				Visit(context, chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
 			}
-			observer.OnList(context, path, name, false, object.Kind(), object.Type(), object.Len())
+			observer.OnList(context, path, name, false, object)
 		case reflect.Struct:
 			observer.OnStruct(context, path, name, true, object)
 			for i := 0; i < object.NumField(); i++ {
@@ -53,18 +53,17 @@ func Visit(context interface{}, path string, name string, object interface{}, ob
 		case reflect.Map:
 			observer.OnMap(context, path, name, true, object)
 			for _, key := range object.MapKeys() {
-				//Visit(context, fmt.Sprintf("%s[%s]", path, format(key)), object.MapIndex(key), observer)
 				Visit(context, path, format(key), object.MapIndex(key), observer)
 			}
 			observer.OnMap(context, path, name, false, object)
 		case reflect.Ptr:
-			observer.OnPointer(context, path, name, true, object.Kind(), object.Type())
+			observer.OnPointer(context, path, name, true, object)
 			if object.IsNil() {
-				Visit(context, path, fmt.Sprintf("*(%s)", name), nil, observer)
+				Visit(context, path, "*"+name, nil, observer)
 			} else {
-				Visit(context, path, fmt.Sprintf("*(%s)", name), object.Elem(), observer)
+				Visit(context, path, "*"+name, object.Elem(), observer)
 			}
-			observer.OnPointer(context, path, name, false, object.Kind(), object.Type())
+			observer.OnPointer(context, path, name, false, object)
 		case reflect.Interface:
 			if object.IsNil() {
 				fmt.Printf("%s = nil\n", path)
