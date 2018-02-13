@@ -14,61 +14,62 @@ import (
 )
 
 type Observer interface {
-	OnValue(context interface{}, path string, name string, object reflect.Value) bool
-	OnPointer(context interface{}, path string, name string, start bool, object reflect.Value) bool
-	OnList(context interface{}, path string, name string, start bool, object reflect.Value) bool
-	OnStruct(context interface{}, path string, name string, start bool, object reflect.Value) bool
-	OnMap(context interface{}, path string, name string, start bool, object reflect.Value) bool
+	OnValue(path string, name string, object reflect.Value) bool
+	OnPointer(path string, name string, start bool, object reflect.Value) bool
+	OnList(path string, name string, start bool, object reflect.Value) bool
+	OnStruct(path string, name string, start bool, object reflect.Value) bool
+	OnMap(path string, name string, start bool, object reflect.Value) bool
 }
 
-func Visit(context interface{}, path string, name string, object interface{}, observer Observer) {
+func Visit(path string, name string, object interface{}, observer Observer) {
 
 	switch object := object.(type) {
 	case reflect.Value:
 		switch object.Kind() {
 		case reflect.Invalid:
-			observer.OnValue(context, path, "?", object.Elem())
+			observer.OnValue(path, "?", object)
 
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
 
-			observer.OnValue(context, path, name, object)
+			observer.OnValue(path, name, object)
 
 		case reflect.Chan:
+			observer.OnValue(path, name, object)
 		case reflect.Func:
 		case reflect.UnsafePointer:
 		case reflect.Slice, reflect.Array:
-			observer.OnList(context, path, name, true, object)
+			observer.OnList(path, name, true, object)
 			for i := 0; i < object.Len(); i++ {
-				Visit(context, chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
+				Visit(chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
 			}
-			observer.OnList(context, path, name, false, object)
+			observer.OnList(path, name, false, object)
 		case reflect.Struct:
-			observer.OnStruct(context, path, name, true, object)
+			observer.OnStruct(path, name, true, object)
 			for i := 0; i < object.NumField(); i++ {
-				Visit(context, chain(path, name), object.Type().Field(i).Name, object.Field(i), observer)
+				Visit(chain(path, name), object.Type().Field(i).Name, object.Field(i), observer)
 			}
-			observer.OnStruct(context, path, name, false, object)
+			observer.OnStruct(path, name, false, object)
 		case reflect.Map:
-			observer.OnMap(context, path, name, true, object)
+			observer.OnMap(path, name, true, object)
 			for _, key := range object.MapKeys() {
-				Visit(context, path, format(key), object.MapIndex(key), observer)
+				Visit(path, format(key), object.MapIndex(key), observer)
 			}
-			observer.OnMap(context, path, name, false, object)
+			observer.OnMap(path, name, false, object)
 		case reflect.Ptr:
-			observer.OnPointer(context, path, name, true, object)
+			observer.OnPointer(path, name, true, object)
 			if object.IsNil() {
-				Visit(context, path, "*"+name, nil, observer)
+				Visit(path, "*"+name, nil, observer)
 			} else {
-				Visit(context, path, "*"+name, object.Elem(), observer)
+				Visit(path, "*"+name, object.Elem(), observer)
 			}
-			observer.OnPointer(context, path, name, false, object)
+			observer.OnPointer(path, name, false, object)
 		case reflect.Interface:
 			if object.IsNil() {
 				fmt.Printf("%s = nil\n", path)
 			} else {
-				Visit(context, path, "[value]", object.Elem(), observer)
+				Visit(path, "[value]", object.Elem(), observer)
 			}
 		default:
 			// basic types, channels, funcs
@@ -77,9 +78,9 @@ func Visit(context interface{}, path string, name string, object interface{}, ob
 	default:
 		log.Debugf("Starting visit of: %s%s (type: %T):\n", path, name, object)
 		// if observer != nil {
-		// 	observer.OnValue(context, path, reflect.TypeOf(object).Kind(), reflect.TypeOf(object), nil)
+		// 	observer.OnValue(path, reflect.TypeOf(object).Kind(), reflect.TypeOf(object), nil)
 		// }
-		Visit(context, path, name, reflect.ValueOf(object), observer)
+		Visit(path, name, reflect.ValueOf(object), observer)
 	}
 }
 

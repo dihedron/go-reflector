@@ -14,6 +14,7 @@ import (
 type Struct struct {
 	MyInterf interface{}
 	MyString string
+	//InvalidValue reflect.Value
 }
 
 type Embedded struct {
@@ -64,10 +65,11 @@ func main() {
 		},
 	}
 
-	observer := MyObserver{}
-	counter := 0
-	reflector.Visit(&counter, "", "o", o, observer)
+	observer := MyObserver{
+		counter: new(int),
+	}
+	reflector.Visit("", "o", o, observer)
 
 	c := complex(10.0, 4.0)
-	reflector.Visit(&counter, "", "c", c, observer)
+	reflector.Visit("", "c", c, observer)
 }

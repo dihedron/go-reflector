@@ -11,72 +11,72 @@ import (
 	"github.com/dihedron/go-reflector/log"
 )
 
-type MyObserver struct{}
+type MyObserver struct {
+	counter *int
+}
 
-func (o MyObserver) OnValue(context interface{}, path string, name string, object reflect.Value) bool {
-	counter := context.(*int)
-	if object.CanInterface() {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: \"%v\",", tab(*counter), name, object.Interface()),
+func (o MyObserver) OnValue(path string, name string, object reflect.Value) bool {
+	if object.Kind() == reflect.Invalid {
+		log.Debugf("%-64s", fmt.Sprintf("%s%s: <invalid> \"<invalid>\",", tab(*(o.counter)), name))
+		// fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+	} else if object.CanInterface() {
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s \"%v\",", tab(*(o.counter)), name, object.Type(), object.Interface()),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
 	} else {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: <unexported>,", tab(*counter), name),
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: <unexported>,", tab(*(o.counter)), name),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnPointer(context interface{}, path string, name string, start bool, object reflect.Value) bool {
-	counter := context.(*int)
+func (o MyObserver) OnPointer(path string, name string, start bool, object reflect.Value) bool {
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s-> {", tab(*counter), name, object.Type()),
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s -> {", tab(*(o.counter)), name, object.Type()),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
-		*counter++
+		*(o.counter)++
 	} else {
-		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)),
+		*(o.counter)--
+		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*(o.counter))),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnList(context interface{}, path string, name string, start bool, object reflect.Value) bool {
-	counter := context.(*int)
+func (o MyObserver) OnList(path string, name string, start bool, object reflect.Value) bool {
 	// has access to object.Len()
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s [", tab(*counter), name, object.Type()),
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s [", tab(*(o.counter)), name, object.Type()),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
-		*counter++
+		*(o.counter)++
 	} else {
-		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s],", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
+		*(o.counter)--
+		log.Debugf("%-64s%s", fmt.Sprintf("%s],", tab(*(o.counter))), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
 			object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnStruct(context interface{}, path string, name string, start bool, object reflect.Value) bool {
-	counter := context.(*int)
+func (o MyObserver) OnStruct(path string, name string, start bool, object reflect.Value) bool {
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: {", tab(*counter), name), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s {", tab(*(o.counter)), name, object.Type()), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
 			object.Kind(), object.Type(), path, name))
-		*counter++
+		*(o.counter)++
 	} else {
-		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
+		*(o.counter)--
+		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*(o.counter))), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
 			object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnMap(context interface{}, path string, name string, start bool, object reflect.Value) bool {
-	counter := context.(*int)
+func (o MyObserver) OnMap(path string, name string, start bool, object reflect.Value) bool {
 	if start {
-		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: map[%s]%s {", tab(*counter), name, object.Type().Key().String(), object.Type().Elem().String()),
+		log.Debugf("%-64s%s", fmt.Sprintf("%s%s: map[%s]%s {", tab(*(o.counter)), name, object.Type().Key().String(), object.Type().Elem().String()),
 			fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
-		*counter++
+		*(o.counter)++
 	} else {
-		*counter--
-		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*counter)), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(),
+		*(o.counter)--
+		log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*(o.counter))), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(),
 			object.Type(), path, name))
 	}
 	return true
