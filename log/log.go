@@ -34,13 +34,26 @@ const (
 	NUL
 )
 
+// Flag is used to influence some aspects of the logger's behaviour such as
+// colorising outputs or automatically include runtime information.
 type Flag int8
 
 const (
+	// FlagSourceInfo specifies whether the log message should automatically
+	// include the source location (note: this feature can be computationally
+	// expensive since it uses reflection at runtime).
 	FlagSourceInfo = 1 << iota
+	// FlagFunctionInfo specifies whether the log message should automatically
+	// include the name of the containing function (note: this feature can be
+	// computationally expensive since it uses reflection at runtime).
 	FlagFunctionInfo
+	// FlagColorise specifies whether the library should output its message
+	// in different colours on platforms that support it.
+	FlagColorise
 )
 
+// FunctionWidth represents the maximum width of the function name width in
+// logging messages.
 const FunctionWidth int = 32
 
 // String returns a string representation of the log level for use in traces.
