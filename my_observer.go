@@ -116,6 +116,12 @@ func (o MyObserver) OnInterface(path string, name string, start bool, object ref
 	return true
 }
 
+func (o MyObserver) OnChannel(path string, name string, object reflect.Value) bool {
+	// fmt.Fprintf(o.buffer, "%s%s: %s [\n", tab(*(o.counter)), name, object.Type())
+	fmt.Fprintf(o.buffer, "%s%s: [%d]%s,\n", tab(*(o.counter)), name, object.Len(), object.Type())
+	return true
+}
+
 func tab(counter int) string {
 	s := ""
 	for i := 0; i < counter; i++ {

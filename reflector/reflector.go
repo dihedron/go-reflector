@@ -21,6 +21,7 @@ type Observer interface {
 	OnStruct(path string, name string, start bool, object reflect.Value) bool
 	OnMap(path string, name string, start bool, object reflect.Value) bool
 	OnInterface(path string, name string, start bool, object reflect.Value) bool
+	OnChannel(path string, name string, object reflect.Value) bool
 }
 
 func Visit(path string, name string, object interface{}, observer Observer) {
@@ -39,7 +40,7 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 			observer.OnValue(path, name, object)
 
 		case reflect.Chan:
-			observer.OnValue(path, name, object)
+			observer.OnChannel(path, name, object)
 
 		case reflect.Func:
 		case reflect.UnsafePointer:
@@ -68,19 +69,18 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 		case reflect.Ptr:
 			observer.OnPointer(path, name, true, object)
 			if object.IsNil() {
-				observer.OnNil(path, "*"+name, object.Type())
-				// Visit(path, "*"+name, nil, observer)
+				observer.OnNil(path, ".value", object.Type())
 			} else {
-				Visit(path, "*"+name, object.Elem(), observer)
+				Visit(path, ".value", object.Elem(), observer)
 			}
 			observer.OnPointer(path, name, false, object)
 
 		case reflect.Interface:
 			observer.OnInterface(path, name, true, object)
 			if object.IsNil() {
-				observer.OnNil(path, name+".value", object.Type())
+				observer.OnNil(path, ".value", object.Type())
 			} else {
-				Visit(path, name+".value", object.Elem(), observer)
+				Visit(path, ".value", object.Elem(), observer)
 			}
 			observer.OnInterface(path, name, false, object)
 

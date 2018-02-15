@@ -26,6 +26,7 @@ type Embedded struct {
 	myPointer    *string
 	MyPointer    *string
 	MyNilPointer *string
+	MyChannel    chan int
 }
 
 type Embedder struct {
