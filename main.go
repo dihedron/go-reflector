@@ -22,9 +22,9 @@ type Struct struct {
 }
 
 type Embedded struct {
-	MyPublic     string
-	myPrivate    string
-	myPointer    *string
+	MyPublic     string  `tag:"tagMyPublic"`
+	myPrivate    string  `tag:"tagmyPrivate"`
+	myPointer    *string `tag:"tagmyPointer"`
 	MyPointer    *string
 	MyNilPointer *string
 	MyChannel    chan int
@@ -32,8 +32,8 @@ type Embedded struct {
 
 type Embedder struct {
 	Embedded
-	StructPlain   Struct
-	StructPtr     *Struct
+	StructPlain   Struct  `tag:"tagStructPlain"`
+	StructPtr     *Struct `tag:"tagStructPtr"`
 	Array         [6]int
 	Slice         []float32
 	Map           map[string]int
@@ -82,6 +82,10 @@ func main() {
 		buffer:  new(bytes.Buffer),
 	}
 	reflector.Visit("", "o", o, observer)
+
+	fmt.Printf("buffer is:\n%s\n", observer)
+
+	observer.Reset()
 
 	c := complex(10.0, 4.0)
 	reflector.Visit("", "c", c, observer)

@@ -19,6 +19,7 @@ type Observer interface {
 	OnPointer(path string, name string, start bool, object reflect.Value) bool
 	OnList(path string, name string, start bool, object reflect.Value) bool
 	OnStruct(path string, name string, start bool, object reflect.Value) bool
+	OnStructField(path string, name string, field reflect.StructField, object reflect.Value) bool
 	OnMap(path string, name string, start bool, object reflect.Value) bool
 	OnInterface(path string, name string, start bool, object reflect.Value) bool
 	OnChannel(path string, name string, object reflect.Value) bool
@@ -61,6 +62,7 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 			observer.OnStruct(path, name, true, object)
 			for i := 0; i < object.NumField(); i++ {
 				Visit(chain(path, name), object.Type().Field(i).Name, object.Field(i), observer)
+				// observer.OnStructField(chain(path, name), object.Type().Field(i).Name, object.Type().Field(i), object.Field(i))
 			}
 			observer.OnStruct(path, name, false, object)
 
