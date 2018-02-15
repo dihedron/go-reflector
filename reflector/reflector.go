@@ -22,6 +22,8 @@ type Observer interface {
 	OnMap(path string, name string, start bool, object reflect.Value) bool
 	OnInterface(path string, name string, start bool, object reflect.Value) bool
 	OnChannel(path string, name string, object reflect.Value) bool
+	OnFunction(path string, name string, object reflect.Value) bool
+	OnUnsafePointer(path string, name string, object reflect.Value) bool
 }
 
 func Visit(path string, name string, object interface{}, observer Observer) {
@@ -43,7 +45,10 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 			observer.OnChannel(path, name, object)
 
 		case reflect.Func:
+			observer.OnFunction(path, name, object)
+
 		case reflect.UnsafePointer:
+			observer.OnUnsafePointer(path, name, object)
 
 		case reflect.Slice, reflect.Array:
 			observer.OnList(path, name, true, object)

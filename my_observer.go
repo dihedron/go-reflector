@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/dihedron/go-reflector/log"
 )
@@ -117,8 +118,17 @@ func (o MyObserver) OnInterface(path string, name string, start bool, object ref
 }
 
 func (o MyObserver) OnChannel(path string, name string, object reflect.Value) bool {
-	// fmt.Fprintf(o.buffer, "%s%s: %s [\n", tab(*(o.counter)), name, object.Type())
 	fmt.Fprintf(o.buffer, "%s%s: [%d]%s,\n", tab(*(o.counter)), name, object.Len(), object.Type())
+	return true
+}
+
+func (o MyObserver) OnFunction(path string, name string, object reflect.Value) bool {
+	fmt.Fprintf(o.buffer, "%s%s: %s,\n", tab(*(o.counter)), name, object.Type())
+	return true
+}
+
+func (o MyObserver) OnUnsafePointer(path string, name string, object reflect.Value) bool {
+	fmt.Fprintf(o.buffer, "%s%s: %s 0x%s,\n", tab(*(o.counter)), name, object.Type(), strconv.FormatUint(uint64(object.Pointer()), 16))
 	return true
 }
 

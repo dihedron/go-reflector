@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/dihedron/go-reflector/log"
 	"github.com/dihedron/go-reflector/reflector"
@@ -31,11 +32,16 @@ type Embedded struct {
 
 type Embedder struct {
 	Embedded
-	StructPlain Struct
-	StructPtr   *Struct
-	Array       [6]int
-	Slice       []float32
-	Map         map[string]int
+	StructPlain   Struct
+	StructPtr     *Struct
+	Array         [6]int
+	Slice         []float32
+	Map           map[string]int
+	UnsafePointer unsafe.Pointer
+}
+
+func (e Embedder) String() string {
+	return "strin"
 }
 
 func main() {
@@ -68,6 +74,7 @@ func main() {
 			"surname": 2,
 			"phone":   3,
 		},
+		UnsafePointer: unsafe.Pointer(&s),
 	}
 
 	observer := MyObserver{
