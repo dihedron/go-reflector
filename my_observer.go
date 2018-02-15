@@ -26,64 +26,76 @@ func (o MyObserver) Reset() {
 	o.buffer.Reset()
 }
 
-func (o MyObserver) OnNil(path string, name string, typ reflect.Type) bool {
+func (o MyObserver) OnNil(path string, name string, tags string, typ reflect.Type) bool {
 	fmt.Fprintf(o.buffer, "%s%s: <nil>,\n", tab(*(o.counter)), name)
 	//log.Debugf("%-64s", fmt.Sprintf("%s%s: <invalid> \"<invalid>\",", tab(*(o.counter)), name))
 	return true
 }
 
-func (o MyObserver) OnValue(path string, name string, object reflect.Value) bool {
+func (o MyObserver) OnValue(path string, name string, tags string, object reflect.Value) bool {
 	if object.Kind() == reflect.Invalid {
-		fmt.Fprintf(o.buffer, "%s%s: <invalid> \"<invalid>\",\n", tab(*(o.counter)), name)
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: <invalid> \"<invalid>\" `%s`,\n", tab(*(o.counter)), name, tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: <invalid> \"<invalid>\",\n", tab(*(o.counter)), name)
+		}
 		// log.Debugf("%-64s", fmt.Sprintf("%s%s: <invalid> \"<invalid>\",", tab(*(o.counter)), name))
 	} else {
 		if object.CanInterface() {
-			fmt.Fprintf(o.buffer, "%s%s: %s \"%v\",\n", tab(*(o.counter)), name, object.Type(), object.Interface())
-			// log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s \"%v\",", tab(*(o.counter)), name, object.Type(), object.Interface()),
-			// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+			if len(tags) > 0 {
+				fmt.Fprintf(o.buffer, "%s%s: %s \"%v\" `%s`,\n", tab(*(o.counter)), name, object.Type(), object.Interface(), tags)
+			} else {
+				fmt.Fprintf(o.buffer, "%s%s: %s \"%v\",\n", tab(*(o.counter)), name, object.Type(), object.Interface())
+			}
 		} else {
-			fmt.Fprintf(o.buffer, "%s%s: <unexported>,\n", tab(*(o.counter)), name)
-			// log.Debugf("%-64s%s", fmt.Sprintf("%s%s: <unexported>,", tab(*(o.counter)), name),
-			// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+			if len(tags) > 0 {
+				fmt.Fprintf(o.buffer, "%s%s: <unexported> `%s`,\n", tab(*(o.counter)), name, tags)
+			} else {
+				fmt.Fprintf(o.buffer, "%s%s: <unexported>,\n", tab(*(o.counter)), name)
+			}
 		}
 	}
 	return true
 }
 
-func (o MyObserver) OnPointer(path string, name string, start bool, object reflect.Value) bool {
+func (o MyObserver) OnPointer(path string, name string, start bool, tags string, object reflect.Value) bool {
 	if start {
-		fmt.Fprintf(o.buffer, "%s%s: %s -> {\n", tab(*(o.counter)), name, object.Type())
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s -> {", tab(*(o.counter)), name, object.Type()),
-		// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: %s `%s` -> {\n", tab(*(o.counter)), name, object.Type(), tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: %s -> {\n", tab(*(o.counter)), name, object.Type())
+		}
 		*(o.counter)++
 	} else {
 		*(o.counter)--
 		fmt.Fprintf(o.buffer, "%s},\n", tab(*(o.counter)))
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*(o.counter))),
-		// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnList(path string, name string, start bool, object reflect.Value) bool {
+func (o MyObserver) OnList(path string, name string, start bool, tags string, object reflect.Value) bool {
 	// has access to object.Len()
 	if start {
-		fmt.Fprintf(o.buffer, "%s%s: %s [\n", tab(*(o.counter)), name, object.Type())
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s%s: %s [", tab(*(o.counter)), name, object.Type()),
-		// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: %s `%s` [\n", tab(*(o.counter)), name, object.Type(), tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: %s [\n", tab(*(o.counter)), name, object.Type())
+		}
 		*(o.counter)++
 	} else {
 		*(o.counter)--
 		fmt.Fprintf(o.buffer, "%s],\n", tab(*(o.counter)))
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s],", tab(*(o.counter))), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q",
-		// 	object.Kind(), object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnStruct(path string, name string, start bool, object reflect.Value) bool {
+func (o MyObserver) OnStruct(path string, name string, start bool, tags string, object reflect.Value) bool {
 	if start {
-		fmt.Fprintf(o.buffer, "%s%s: %s {\n", tab(*(o.counter)), name, object.Type())
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: %s `%s` {\n", tab(*(o.counter)), name, object.Type(), tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: %s {\n", tab(*(o.counter)), name, object.Type())
+		}
 		*(o.counter)++
 	} else {
 		*(o.counter)--
@@ -92,39 +104,43 @@ func (o MyObserver) OnStruct(path string, name string, start bool, object reflec
 	return true
 }
 
-func (o MyObserver) OnStructField(path string, name string, field reflect.StructField, object reflect.Value) bool {
+// func (o MyObserver) OnStructField(path string, name string, field reflect.StructField, tags string, object reflect.Value) bool {
 
-	if object.CanInterface() {
-		fmt.Fprintf(o.buffer, "%s%s: %s \"%v\" {\n", tab(*(o.counter)), name, object.Type(), object.Interface())
-		*(o.counter)++
-		// TODO: loop on headers
-		*(o.counter)--
-	} else {
-		fmt.Fprintf(o.buffer, "%s%s: <unexported> {\n", tab(*(o.counter)), name)
-	}
-	fmt.Fprintf(o.buffer, "%s  ... headers ...\n", tab(*(o.counter)))
-	fmt.Fprintf(o.buffer, "%s},\n", tab(*(o.counter)))
-	return true
-}
+// 	if object.CanInterface() {
+// 		fmt.Fprintf(o.buffer, "%s%s: %s \"%v\" {\n", tab(*(o.counter)), name, object.Type(), object.Interface())
+// 		*(o.counter)++
+// 		// TODO: loop on headers
+// 		*(o.counter)--
+// 	} else {
+// 		fmt.Fprintf(o.buffer, "%s%s: <unexported> {\n", tab(*(o.counter)), name)
+// 	}
+// 	fmt.Fprintf(o.buffer, "%s  ... headers ...\n", tab(*(o.counter)))
+// 	fmt.Fprintf(o.buffer, "%s},\n", tab(*(o.counter)))
+// 	return true
+// }
 
-func (o MyObserver) OnMap(path string, name string, start bool, object reflect.Value) bool {
+func (o MyObserver) OnMap(path string, name string, start bool, tags string, object reflect.Value) bool {
 	if start {
-		fmt.Fprintf(o.buffer, "%s%s: map[%s]%s {\n", tab(*(o.counter)), name, object.Type().Key().String(), object.Type().Elem().String())
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s%s: map[%s]%s {", tab(*(o.counter)), name, object.Type().Key().String(), object.Type().Elem().String()),
-		// 	fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(), object.Type(), path, name))
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: map[%s]%s `%s` {\n", tab(*(o.counter)), name, object.Type().Key().String(), object.Type().Elem().String(), tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: map[%s]%s {\n", tab(*(o.counter)), name, object.Type().Key().String(), object.Type().Elem().String())
+		}
 		*(o.counter)++
 	} else {
 		*(o.counter)--
 		fmt.Fprintf(o.buffer, "%s}\n", tab(*(o.counter)))
-		// log.Debugf("%-64s%s", fmt.Sprintf("%s},", tab(*(o.counter))), fmt.Sprintf("// kind: %-12s type: %-20s path: %-16q name: %q", object.Kind(),
-		// 	object.Type(), path, name))
 	}
 	return true
 }
 
-func (o MyObserver) OnInterface(path string, name string, start bool, object reflect.Value) bool {
+func (o MyObserver) OnInterface(path string, name string, start bool, tags string, object reflect.Value) bool {
 	if start {
-		fmt.Fprintf(o.buffer, "%s%s: %s {\n", tab(*(o.counter)), name, object.Type())
+		if len(tags) > 0 {
+			fmt.Fprintf(o.buffer, "%s%s: %s `%s` {\n", tab(*(o.counter)), name, object.Type(), tags)
+		} else {
+			fmt.Fprintf(o.buffer, "%s%s: %s {\n", tab(*(o.counter)), name, object.Type())
+		}
 		*(o.counter)++
 	} else {
 		*(o.counter)--
@@ -133,18 +149,30 @@ func (o MyObserver) OnInterface(path string, name string, start bool, object ref
 	return true
 }
 
-func (o MyObserver) OnChannel(path string, name string, object reflect.Value) bool {
-	fmt.Fprintf(o.buffer, "%s%s: [%d]%s,\n", tab(*(o.counter)), name, object.Len(), object.Type())
+func (o MyObserver) OnChannel(path string, name string, tags string, object reflect.Value) bool {
+	if len(tags) > 0 {
+		fmt.Fprintf(o.buffer, "%s%s: [%d]%s `%s`,\n", tab(*(o.counter)), name, object.Len(), object.Type(), tags)
+	} else {
+		fmt.Fprintf(o.buffer, "%s%s: [%d]%s,\n", tab(*(o.counter)), name, object.Len(), object.Type())
+	}
 	return true
 }
 
-func (o MyObserver) OnFunction(path string, name string, object reflect.Value) bool {
-	fmt.Fprintf(o.buffer, "%s%s: %s,\n", tab(*(o.counter)), name, object.Type())
+func (o MyObserver) OnFunction(path string, name string, tags string, object reflect.Value) bool {
+	if len(tags) > 0 {
+		fmt.Fprintf(o.buffer, "%s%s: %s `%s`,\n", tab(*(o.counter)), name, object.Type(), tags)
+	} else {
+		fmt.Fprintf(o.buffer, "%s%s: %s,\n", tab(*(o.counter)), name, object.Type())
+	}
 	return true
 }
 
-func (o MyObserver) OnUnsafePointer(path string, name string, object reflect.Value) bool {
-	fmt.Fprintf(o.buffer, "%s%s: %s 0x%s,\n", tab(*(o.counter)), name, object.Type(), strconv.FormatUint(uint64(object.Pointer()), 16))
+func (o MyObserver) OnUnsafePointer(path string, name string, tags string, object reflect.Value) bool {
+	if len(tags) > 0 {
+		fmt.Fprintf(o.buffer, "%s%s: %s 0x%s `%s`,\n", tab(*(o.counter)), name, object.Type(), strconv.FormatUint(uint64(object.Pointer()), 16), tags)
+	} else {
+		fmt.Fprintf(o.buffer, "%s%s: %s 0x%s,\n", tab(*(o.counter)), name, object.Type(), strconv.FormatUint(uint64(object.Pointer()), 16))
+	}
 	return true
 }
 

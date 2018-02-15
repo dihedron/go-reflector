@@ -14,82 +14,88 @@ import (
 )
 
 type Observer interface {
-	OnNil(path string, name string, typ reflect.Type) bool
-	OnValue(path string, name string, object reflect.Value) bool
-	OnPointer(path string, name string, start bool, object reflect.Value) bool
-	OnList(path string, name string, start bool, object reflect.Value) bool
-	OnStruct(path string, name string, start bool, object reflect.Value) bool
-	OnStructField(path string, name string, field reflect.StructField, object reflect.Value) bool
-	OnMap(path string, name string, start bool, object reflect.Value) bool
-	OnInterface(path string, name string, start bool, object reflect.Value) bool
-	OnChannel(path string, name string, object reflect.Value) bool
-	OnFunction(path string, name string, object reflect.Value) bool
-	OnUnsafePointer(path string, name string, object reflect.Value) bool
+	OnNil(path string, name string, tags string, typ reflect.Type) bool
+	OnValue(path string, name string, tags string, object reflect.Value) bool
+	OnPointer(path string, name string, start bool, tags string, object reflect.Value) bool
+	OnList(path string, name string, start bool, tags string, object reflect.Value) bool
+	OnStruct(path string, name string, start bool, tags string, object reflect.Value) bool
+	OnMap(path string, name string, start bool, tags string, object reflect.Value) bool
+	OnInterface(path string, name string, start bool, tags string, object reflect.Value) bool
+	OnChannel(path string, name string, tags string, object reflect.Value) bool
+	OnFunction(path string, name string, tags string, object reflect.Value) bool
+	OnUnsafePointer(path string, name string, tags string, object reflect.Value) bool
 }
 
-func Visit(path string, name string, object interface{}, observer Observer) {
+func Visit(path string, name string, object interface{}, field interface{}, observer Observer) {
+
+	tag := ""
+	field, ok := field.(reflect.StructField)
+	if ok {
+		// we are visiting a struct field as a value: add headers
+		tag = string((field.(reflect.StructField)).Tag)
+	}
 
 	switch object := object.(type) {
 	case reflect.Value:
 		switch object.Kind() {
 
 		case reflect.Invalid:
-			observer.OnValue(path, "?", object)
+			observer.OnValue(path, "?", tag, object)
 
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
 
-			observer.OnValue(path, name, object)
+			observer.OnValue(path, name, tag, object)
 
 		case reflect.Chan:
-			observer.OnChannel(path, name, object)
+			observer.OnChannel(path, name, tag, object)
 
 		case reflect.Func:
-			observer.OnFunction(path, name, object)
+			observer.OnFunction(path, name, tag, object)
 
 		case reflect.UnsafePointer:
-			observer.OnUnsafePointer(path, name, object)
+			observer.OnUnsafePointer(path, name, tag, object)
 
 		case reflect.Slice, reflect.Array:
-			observer.OnList(path, name, true, object)
+			observer.OnList(path, name, true, tag, object)
 			for i := 0; i < object.Len(); i++ {
-				Visit(chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
+				Visit(chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), nil, observer)
 			}
-			observer.OnList(path, name, false, object)
+			observer.OnList(path, name, false, tag, object)
 
 		case reflect.Struct:
-			observer.OnStruct(path, name, true, object)
+			observer.OnStruct(path, name, true, tag, object)
 			for i := 0; i < object.NumField(); i++ {
-				Visit(chain(path, name), object.Type().Field(i).Name, object.Field(i), observer)
-				// observer.OnStructField(chain(path, name), object.Type().Field(i).Name, object.Type().Field(i), object.Field(i))
+				// if object.Type().Field(i).Name
+				Visit(chain(path, name), object.Type().Field(i).Name, object.Field(i), object.Type().Field(i), observer)
 			}
-			observer.OnStruct(path, name, false, object)
+			observer.OnStruct(path, name, false, tag, object)
 
 		case reflect.Map:
-			observer.OnMap(path, name, true, object)
+			observer.OnMap(path, name, true, tag, object)
 			for _, key := range object.MapKeys() {
-				Visit(path, format(key), object.MapIndex(key), observer)
+				Visit(path, format(key), object.MapIndex(key), nil, observer)
 			}
-			observer.OnMap(path, name, false, object)
+			observer.OnMap(path, name, false, tag, object)
 
 		case reflect.Ptr:
-			observer.OnPointer(path, name, true, object)
+			observer.OnPointer(path, name, true, tag, object)
 			if object.IsNil() {
-				observer.OnNil(path, ".value", object.Type())
+				observer.OnNil(path, ".value", tag, object.Type())
 			} else {
-				Visit(path, ".value", object.Elem(), observer)
+				Visit(path, ".value", object.Elem(), nil, observer)
 			}
-			observer.OnPointer(path, name, false, object)
+			observer.OnPointer(path, name, false, tag, object)
 
 		case reflect.Interface:
-			observer.OnInterface(path, name, true, object)
+			observer.OnInterface(path, name, true, tag, object)
 			if object.IsNil() {
-				observer.OnNil(path, ".value", object.Type())
+				observer.OnNil(path, ".value", tag, object.Type())
 			} else {
-				Visit(path, ".value", object.Elem(), observer)
+				Visit(path, ".value", object.Elem(), nil, observer)
 			}
-			observer.OnInterface(path, name, false, object)
+			observer.OnInterface(path, name, false, tag, object)
 
 		default:
 			// basic types, channels, funcs
@@ -100,7 +106,7 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 		// if observer != nil {
 		// 	observer.OnValue(path, reflect.TypeOf(object).Kind(), reflect.TypeOf(object), nil)
 		// }
-		Visit(path, name, reflect.ValueOf(object), observer)
+		Visit(path, name, reflect.ValueOf(object), nil, observer)
 	}
 }
 

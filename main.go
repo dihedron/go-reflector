@@ -81,14 +81,14 @@ func main() {
 		counter: new(int),
 		buffer:  new(bytes.Buffer),
 	}
-	reflector.Visit("", "o", o, observer)
+	reflector.Visit("", "o", o, nil, observer)
 
 	fmt.Printf("buffer is:\n%s\n", observer)
 
 	observer.Reset()
 
 	c := complex(10.0, 4.0)
-	reflector.Visit("", "c", c, observer)
+	reflector.Visit("", "c", c, nil, observer)
 
 	fmt.Printf("buffer is:\n%s\n", observer)
 }
