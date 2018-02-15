@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 
 	"github.com/dihedron/go-reflector/log"
@@ -12,16 +14,18 @@ import (
 )
 
 type Struct struct {
-	MyInterf interface{}
-	MyString string
+	MyInterf1 interface{}
+	MyInterf2 interface{}
+	MyString  string
 	//InvalidValue reflect.Value
 }
 
 type Embedded struct {
-	MyPublic  string
-	myPrivate string
-	myPointer *string
-	MyPointer *string
+	MyPublic     string
+	myPrivate    string
+	myPointer    *string
+	MyPointer    *string
+	MyNilPointer *string
 }
 
 type Embedder struct {
@@ -49,12 +53,12 @@ func main() {
 			MyPointer: &s,
 		},
 		StructPlain: Struct{
-			MyInterf: "string as interface in referenced struct",
-			MyString: "string in struct",
+			MyInterf1: "string as interface in referenced struct",
+			MyString:  "string in struct",
 		},
 		StructPtr: &Struct{
-			MyInterf: "string as interface in pointed struct",
-			MyString: "string in pointed struct",
+			MyInterf1: "string as interface in pointed struct",
+			MyString:  "string in pointed struct",
 		},
 		Array: [6]int{0, 1, 2, 3, 4, 5},
 		Slice: []float32{0, 1, 2, 3, 4, 5, 6},
@@ -67,9 +71,12 @@ func main() {
 
 	observer := MyObserver{
 		counter: new(int),
+		buffer:  new(bytes.Buffer),
 	}
 	reflector.Visit("", "o", o, observer)
 
 	c := complex(10.0, 4.0)
 	reflector.Visit("", "c", c, observer)
+
+	fmt.Printf("buffer is:\n%s\n", observer)
 }

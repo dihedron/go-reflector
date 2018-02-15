@@ -14,11 +14,13 @@ import (
 )
 
 type Observer interface {
+	OnNil(path string, name string, typ reflect.Type) bool
 	OnValue(path string, name string, object reflect.Value) bool
 	OnPointer(path string, name string, start bool, object reflect.Value) bool
 	OnList(path string, name string, start bool, object reflect.Value) bool
 	OnStruct(path string, name string, start bool, object reflect.Value) bool
 	OnMap(path string, name string, start bool, object reflect.Value) bool
+	OnInterface(path string, name string, start bool, object reflect.Value) bool
 }
 
 func Visit(path string, name string, object interface{}, observer Observer) {
@@ -26,6 +28,7 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 	switch object := object.(type) {
 	case reflect.Value:
 		switch object.Kind() {
+
 		case reflect.Invalid:
 			observer.OnValue(path, "?", object)
 
@@ -37,40 +40,50 @@ func Visit(path string, name string, object interface{}, observer Observer) {
 
 		case reflect.Chan:
 			observer.OnValue(path, name, object)
+
 		case reflect.Func:
 		case reflect.UnsafePointer:
+
 		case reflect.Slice, reflect.Array:
 			observer.OnList(path, name, true, object)
 			for i := 0; i < object.Len(); i++ {
 				Visit(chain(path, name), fmt.Sprintf("[%d]", i), object.Index(i), observer)
 			}
 			observer.OnList(path, name, false, object)
+
 		case reflect.Struct:
 			observer.OnStruct(path, name, true, object)
 			for i := 0; i < object.NumField(); i++ {
 				Visit(chain(path, name), object.Type().Field(i).Name, object.Field(i), observer)
 			}
 			observer.OnStruct(path, name, false, object)
+
 		case reflect.Map:
 			observer.OnMap(path, name, true, object)
 			for _, key := range object.MapKeys() {
 				Visit(path, format(key), object.MapIndex(key), observer)
 			}
 			observer.OnMap(path, name, false, object)
+
 		case reflect.Ptr:
 			observer.OnPointer(path, name, true, object)
 			if object.IsNil() {
-				Visit(path, "*"+name, nil, observer)
+				observer.OnNil(path, "*"+name, object.Type())
+				// Visit(path, "*"+name, nil, observer)
 			} else {
 				Visit(path, "*"+name, object.Elem(), observer)
 			}
 			observer.OnPointer(path, name, false, object)
+
 		case reflect.Interface:
+			observer.OnInterface(path, name, true, object)
 			if object.IsNil() {
-				fmt.Printf("%s = nil\n", path)
+				observer.OnNil(path, name+".value", object.Type())
 			} else {
-				Visit(path, "[value]", object.Elem(), observer)
+				Visit(path, name+".value", object.Elem(), observer)
 			}
+			observer.OnInterface(path, name, false, object)
+
 		default:
 			// basic types, channels, funcs
 			fmt.Printf("***%s = %s\n", path, format(object))
